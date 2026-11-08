@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Site Showdown</title>
+<meta name="description" content="Submit your website and pick your three favorites.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700&family=DM+Sans:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<link rel="stylesheet" href="style.css">
+<script>
+  // One random id per browser. It's the voter id and marks the site you submitted.
+  (function () {
+    var id = '';
+    try { id = localStorage.getItem('showdown-id') || ''; } catch (e) {}
+    if (!id) {
+      id = Array.from(crypto.getRandomValues(new Uint8Array(8)), function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+      try { localStorage.setItem('showdown-id', id); } catch (e) {}
+    }
+    window.SHOWDOWN_ID = id;
+    document.addEventListener('htmx:configRequest', function (e) { e.detail.headers['X-Voter'] = id; });
+  })();
+</script>
+<script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js" defer></script>
+</head>
+<body>
+<main class="wrap">
+  <p class="kicker">Class vote</p>
+  <h1>Site <em>Showdown</em></h1>
+  <p class="lead">Add your finished site, then pick your <strong>three</strong> favorites from everyone else's. Votes are secret until the big reveal.</p>
+
+  <h2>1 · Add your site</h2>
+  <form class="submit" hx-post="/api/sites" hx-target="#list" hx-swap="outerHTML" hx-on::after-request="if (event.detail.successful && event.detail.xhr.getResponseHeader('HX-Trigger') === 'submitted') this.reset()">
+    <label for="name">Your name or nickname <input id="name" name="name" maxlength="40" autocomplete="nickname" required placeholder="e.g. Maya"></label>
+    <label for="url">Your site's address <input id="url" name="url" inputmode="url" maxlength="200" required placeholder="yourname.github.io"></label>
+    <label for="tagline">One line about it <span class="hint">(optional)</span> <input id="tagline" name="tagline" maxlength="80" placeholder="e.g. Retro 90s skate zine"></label>
+    <div><button type="submit">Add my site</button></div>
+  </form>
+
+  <h2>2 · Pick your favorites</h2>
+  <div id="list" hx-get="/api/sites" hx-trigger="load, every 6s" hx-swap="outerHTML">
+    <p class="empty">Loading…</p>
+  </div>
+  <p class="hint" style="margin-top:20px">New sites show up here on their own. You can change your picks until the teacher closes voting.</p>
+</main>
+</body>
+</html>

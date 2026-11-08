@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Showdown Host</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700&family=DM+Sans:ital,wght@0,400;0,600;0,700;1,400&display=swap">
+<link rel="stylesheet" href="style.css">
+<script>
+  // The host pin lives in sessionStorage for this tab and goes out as X-Pin.
+  function pin() { try { return sessionStorage.getItem('showdown-pin') || ''; } catch (e) { return ''; } }
+  document.addEventListener('htmx:configRequest', function (e) { e.detail.headers['X-Pin'] = pin(); });
+  document.addEventListener('htmx:responseError', function (e) {
+    if (e.detail.xhr.status === 401) { try { sessionStorage.removeItem('showdown-pin'); } catch (x) {} showGate('That pin is wrong.'); }
+  });
+  function showGate(msg) {
+    document.getElementById('app').hidden = true;
+    var g = document.getElementById('gate'); g.hidden = false;
+    document.getElementById('gate-err').textContent = msg || '';
+    document.getElementById('pin').focus();
+  }
+  function enter(ev) {
+    ev.preventDefault();
+    try { sessionStorage.setItem('showdown-pin', document.getElementById('pin').value); } catch (e) {}
+    document.getElementById('gate').hidden = true;
+    document.getElementById('app').hidden = false;
+    htmx.trigger('#board', 'refresh');
+  }
+  document.addEventListener('DOMContentLoaded', function () { if (!pin()) showGate(''); });
+</script>
+<script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js" defer></script>
+<script src="https://unpkg.com/idiomorph@0.3.0/dist/idiomorph-ext.min.js" defer></script>
+</head>
+<body hx-ext="morph">
+<form id="gate" class="gate" hidden onsubmit="enter(event)">
+  <p class="kicker">Host only</p>
+  <h1>Enter the pin</h1>
+  <label for="pin">Host pin <input id="pin" type="password" autocomplete="off" required></label>
+  <p id="gate-err" class="err"></p>
+  <button type="submit">Open the board</button>
+  <p class="hint">Set it with the <code>HOST_PIN</code> environment variable. Default is <code>kaboom</code>.</p>
+</form>
+
+<main id="app" class="wrap wide">
+  <div class="toolbar">
+    <div class="grow">
+      <p class="kicker" style="margin:0">Live board · refreshes every 2 s</p>
+      <h1 style="font-size:28px;margin:0">Site Showdown</h1>
+    </div>
+    <button type="button" class="ghost" hx-post="/api/admin" hx-vals='{"action":"unlock"}' hx-target="#board" hx-swap="morph:outerHTML">Open voting</button>
+    <button type="button" hx-post="/api/admin" hx-vals='{"action":"lock"}' hx-target="#board" hx-swap="morph:outerHTML">Close voting</button>
+    <button type="button" class="ghost" hx-post="/api/admin" hx-vals='{"action":"reset"}' hx-target="#board" hx-swap="morph:outerHTML" hx-confirm="Wipe every vote? Sites stay.">Reset votes</button>
+    <a class="pill" href="reveal" style="padding:10px 16px;background:var(--jolt);color:#fff;text-decoration:none">Go to the reveal →</a>
+  </div>
+  <p class="hint" style="margin:0 0 16px">Student link: <strong id="student-link"></strong> <button type="button" class="ghost" style="padding:4px 10px;font-size:13px" onclick="navigator.clipboard.writeText(document.getElementById('student-link').textContent).then(function(){this.textContent='Copied'}.bind(this),function(){})">Copy</button></p>
+  <div id="board" hx-get="/api/board" hx-trigger="load, every 2s, refresh" hx-swap="morph:outerHTML">
+    <p class="empty">Loading the board…</p>
+  </div>
+</main>
+<script>document.getElementById('student-link').textContent = location.origin + '/';</script>
+</body>
+</html>

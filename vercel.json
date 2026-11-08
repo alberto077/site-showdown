@@ -1,0 +1,9 @@
+{
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/api/sites", "destination": "/api/sites/index" },
+    { "source": "/api/vote", "destination": "/api/vote/index" },
+    { "source": "/api/board", "destination": "/api/board/index" },
+    { "source": "/api/admin", "destination": "/api/admin/index" }
+  ]
+}

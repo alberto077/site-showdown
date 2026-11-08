@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Showdown Reveal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;900&family=DM+Sans:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="style.css">
+<style>
+  html, body { height: 100%; }
+  body { display: grid; place-items: center; position: relative; overflow: auto; padding-block: 24px 64px; }
+  .stage { position: relative; z-index: 2; text-align: center; width: min(1100px, 94vw); display: grid; gap: 22px; justify-items: center; }
+  .stage.live .big { font-size: clamp(30px, 5.5vw, 72px); }
+  .big { font-family: var(--display); font-size: clamp(36px, 8vw, 110px); line-height: 1; letter-spacing: -0.03em; margin: 0; }
+  .sub { color: var(--muted); font-size: clamp(16px, 2.4vw, 26px); margin: 0; }
+  .podium { display: grid; gap: 16px; width: 100%; grid-template-columns: repeat(3, 1fr); align-items: end; }
+  @media (max-width: 700px) { .podium { grid-template-columns: 1fr; } }
+  .place { background: var(--panel); border: 1px solid var(--line); border-radius: 20px; padding: 18px 16px; display: grid; gap: 4px; opacity: 0; transform: translateY(40px); min-height: 120px; }
+  .place.show { animation: rise .6s cubic-bezier(.2,.9,.3,1.3) forwards; }
+  .place .pos { font-family: var(--display); font-size: 14px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+  .place .nm { font-family: var(--display); font-size: clamp(22px, 3vw, 36px); line-height: 1.1; overflow-wrap: anywhere; }
+  .place .tg { color: var(--muted); }
+  .place .n { font-family: var(--display); color: var(--gold); font-size: 28px; }
+  .place a { font-size: 14px; overflow-wrap: anywhere; }
+  .place.third { order: 3; } .place.second { order: 1; } .place.first { order: 2; }
+  @media (max-width: 700px) { .place.first { order: 1; } .place.second { order: 2; } .place.third { order: 3; } }
+  .place.first { border-color: var(--gold); background: linear-gradient(180deg, #2b230a, var(--panel)); box-shadow: 0 0 80px rgba(255,200,61,.35); }
+  .place.first.show { animation: kaboom .9s cubic-bezier(.2,.9,.2,1.2) forwards; }
+  .place.first .pos { color: var(--gold); }
+  .place.first .nm { font-size: clamp(30px, 4.5vw, 54px); }
+  .winner-frame { position: absolute; inset: 0; z-index: 1; opacity: 0; transition: opacity 1.2s; pointer-events: none; }
+  .winner-frame iframe { width: 100%; height: 100%; border: 0; filter: blur(2px) brightness(.45); }
+  .winner-frame.on { opacity: 1; }
+  .hint-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 3; padding: 12px 16px; text-align: center; color: var(--muted); font-size: 14px; background: linear-gradient(transparent, var(--bg)); }
+  .pulse { animation: pulse 1.4s ease-in-out infinite; }
+  .shake { animation: shake .7s linear; }
+  .flashwhite { position: fixed; inset: 0; z-index: 4; background: #fff; opacity: 0; pointer-events: none; }
+  .flashwhite.go { animation: flash .5s ease-out; }
+  @keyframes rise { to { opacity: 1; transform: none; } }
+  @keyframes kaboom { 0% { opacity: 0; transform: scale(.2) rotate(-6deg); } 60% { opacity: 1; transform: scale(1.12) rotate(2deg); } 100% { opacity: 1; transform: none; } }
+  @keyframes pulse { 0%, 100% { opacity: .6; } 50% { opacity: 1; } }
+  @keyframes shake { 0%,100% { transform: translate(0,0); } 10% { transform: translate(-12px, 6px); } 20% { transform: translate(10px,-8px); } 30% { transform: translate(-8px, 8px); } 40% { transform: translate(8px,-4px); } 50% { transform: translate(-6px, 4px); } 60% { transform: translate(6px,-6px); } 70% { transform: translate(-4px, 2px); } 80% { transform: translate(4px,-2px); } 90% { transform: translate(-2px, 1px); } }
+  @keyframes flash { 0% { opacity: .9; } 100% { opacity: 0; } }
+  .gate { position: relative; z-index: 5; }
+</style>
+</head>
+<body>
+<form id="gate" class="gate" hidden onsubmit="enter(event)">
+  <p class="kicker">Host only</p>
+  <h1>Enter the pin</h1>
+  <label for="pin">Host pin <input id="pin" type="password" autocomplete="off" required></label>
+  <p id="gate-err" class="err"></p>
+  <button type="submit">Load the results</button>
+</form>
+
+<div class="winner-frame" id="winner-frame"></div>
+<div class="flashwhite" id="flash"></div>
+
+<main class="stage" id="stage" hidden>
+  <p class="kicker" id="kicker">Site Showdown</p>
+  <h1 class="big" id="title">The votes are in.</h1>
+  <p class="sub" id="sub"></p>
+  <div class="podium" id="podium" hidden>
+    <div class="place third" id="p3"></div>
+    <div class="place second" id="p2"></div>
+    <div class="place first" id="p1"></div>
+  </div>
+  <div id="go"><button type="button" class="pulse" id="next" style="font-size:20px;padding:16px 28px">Start the reveal</button></div>
+</main>
+<p class="hint-bar" id="hintbar" hidden>Press <strong>Space</strong> or <strong>→</strong> for the next step · <strong>R</strong> replays · <strong>F</strong> full screen</p>
+
+<script src="https://unpkg.com/canvas-confetti@1.9.3/dist/confetti.browser.js"></script>
+<script>
+(function () {
+  var data = null, step = 0, busy = false;
+
+  function pin() { try { return sessionStorage.getItem('showdown-pin') || ''; } catch (e) { return ''; } }
+  function showGate(msg) {
+    document.getElementById('stage').hidden = true;
+    var g = document.getElementById('gate'); g.hidden = false;
+    document.getElementById('gate-err').textContent = msg || '';
+    document.getElementById('pin').focus();
+  }
+  window.enter = function (ev) {
+    ev.preventDefault();
+    try { sessionStorage.setItem('showdown-pin', document.getElementById('pin').value); } catch (e) {}
+    load();
+  };
+
+  function load() {
+    fetch('/api/board?format=json', { headers: { 'X-Pin': pin() }, cache: 'no-store' })
+      .then(function (r) { if (r.status === 401) { throw new Error('pin'); } return r.json(); })
+      .then(function (d) {
+        data = d;
+        document.getElementById('gate').hidden = true;
+        document.getElementById('stage').hidden = false;
+        document.getElementById('hintbar').hidden = false;
+        reset();
+      })
+      .catch(function (e) { try { sessionStorage.removeItem('showdown-pin'); } catch (x) {} showGate(e.message === 'pin' ? 'That pin is wrong.' : 'Could not load the results. Is the server up?'); });
+  }
+
+  function el(id) { return document.getElementById(id); }
+  function place(div, label, s) {
+    div.innerHTML = '<span class="pos">' + label + '</span><span class="nm"></span><span class="tg"></span><span class="n"></span><a target="_blank" rel="noopener"></a>';
+    div.querySelector('.nm').textContent = s.name;
+    div.querySelector('.tg').textContent = s.tagline || '';
+    div.querySelector('.n').textContent = s.count + (s.count === 1 ? ' vote' : ' votes');
+    var a = div.querySelector('a'); a.href = s.url; a.textContent = s.url.replace(/^https?:\/\//, '').replace(/\/$/, '') + ' ↗';
+  }
+
+  function reset() {
+    step = 0;
+    var r = data.ranked;
+    el('title').textContent = 'The votes are in.';
+    el('sub').textContent = data.totalVotes + ' votes from ' + data.voters + (data.voters === 1 ? ' voter' : ' voters') + ' across ' + r.length + (r.length === 1 ? ' site' : ' sites') + (data.locked ? '' : ' · voting is still open!');
+    el('podium').hidden = true;
+    el('stage').classList.remove('live');
+    ['p1', 'p2', 'p3'].forEach(function (id) { el(id).className = el(id).className.replace(' show', ''); el(id).innerHTML = ''; });
+    el('winner-frame').className = 'winner-frame'; el('winner-frame').innerHTML = '';
+    el('go').hidden = false; el('next').textContent = 'Start the reveal';
+    document.body.classList.remove('shake');
+  }
+
+  // --- a drum roll from nothing but the Web Audio API
+  var ac = null;
+  function drumroll(ms) {
+    try {
+      ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+      var t0 = ac.currentTime, n = Math.floor(ms / 1000 * 18);
+      for (var i = 0; i < n; i++) {
+        var t = t0 + (i / n) * (ms / 1000) * (1 - 0.3 * (i / n));
+        var o = ac.createOscillator(), g = ac.createGain();
+        o.type = 'triangle'; o.frequency.setValueAtTime(90 + Math.random() * 30, t);
+        g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.25 + 0.4 * (i / n), t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.06);
+        o.connect(g).connect(ac.destination); o.start(t); o.stop(t + 0.08);
+      }
+    } catch (e) {}
+  }
+  function boom() {
+    try {
+      ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+      var t = ac.currentTime, o = ac.createOscillator(), g = ac.createGain();
+      o.type = 'sine'; o.frequency.setValueAtTime(160, t); o.frequency.exponentialRampToValueAtTime(30, t + 0.6);
+      g.gain.setValueAtTime(0.9, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
+      o.connect(g).connect(ac.destination); o.start(t); o.stop(t + 1);
+    } catch (e) {}
+  }
+
+  function fire(opts) { if (window.confetti) confetti(Object.assign({ zIndex: 6, colors: ['#ffc83d', '#ff3d8a', '#ffffff', '#4ade80'] }, opts)); }
+
+  function next() {
+    if (busy || !data) return;
+    var r = data.ranked;
+    step++;
+    el('go').hidden = true;
+    if (step === 1) {
+      el('podium').hidden = false;
+      el('stage').classList.add('live');
+      el('title').textContent = 'Third place…';
+      el('sub').textContent = '';
+      if (r[2]) { place(el('p3'), '3rd place', r[2]); el('p3').classList.add('show'); fire({ particleCount: 60, spread: 60, origin: { y: .7 } }); }
+      else { el('p3').innerHTML = '<span class="pos">3rd place</span><span class="tg">Not enough sites for a third place.</span>'; el('p3').classList.add('show'); }
+    } else if (step === 2) {
+      el('title').textContent = 'Second place…';
+      if (r[1]) { place(el('p2'), '2nd place', r[1]); el('p2').classList.add('show'); fire({ particleCount: 90, spread: 80, origin: { y: .7 } }); }
+      else { el('p2').innerHTML = '<span class="pos">2nd place</span><span class="tg">Only one site entered.</span>'; el('p2').classList.add('show'); }
+    } else if (step === 3) {
+      el('title').textContent = 'And the winner is…';
+      el('title').classList.add('pulse');
+      busy = true;
+      drumroll(3200);
+      setTimeout(function () {
+        busy = false; step = 4;
+        el('title').classList.remove('pulse');
+        if (!r[0]) { el('title').textContent = 'Nobody entered yet!'; return; }
+        boom();
+        el('flash').className = 'flashwhite go';
+        document.body.classList.add('shake');
+        el('title').textContent = r[0].name + '!';
+        el('sub').textContent = r[0].count + (r[0].count === 1 ? ' vote' : ' votes') + (r[1] && r[1].count === r[0].count ? ' · a tie, broken by who entered first' : '');
+        place(el('p1'), 'Winner', r[0]); el('p1').classList.add('show');
+        var f = el('winner-frame'); f.innerHTML = '<iframe title="Winning site" sandbox="allow-scripts allow-same-origin"></iframe>';
+        f.querySelector('iframe').src = r[0].url; f.classList.add('on');
+        var end = Date.now() + 2500;
+        (function frame() {
+          fire({ particleCount: 7, angle: 60, spread: 70, origin: { x: 0, y: .8 } });
+          fire({ particleCount: 7, angle: 120, spread: 70, origin: { x: 1, y: .8 } });
+          if (Date.now() < end) requestAnimationFrame(frame);
+        })();
+        fire({ particleCount: 250, spread: 120, startVelocity: 55, origin: { y: .6 } });
+        setTimeout(function () { fire({ particleCount: 150, spread: 160, origin: { y: .4 } }); }, 600);
+        el('go').hidden = false; el('next').textContent = 'Replay'; el('next').classList.remove('pulse');
+      }, 3400);
+    } else {
+      reset();
+    }
+  }
+
+  el('next').addEventListener('click', next);
+  document.addEventListener('keydown', function (e) {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.code === 'Space' || e.code === 'ArrowRight' || e.code === 'Enter') { e.preventDefault(); next(); }
+    if (e.key === 'r' || e.key === 'R') { reset(); }
+    if (e.key === 'f' || e.key === 'F') { (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen()).catch(function () {}); }
+  });
+
+  if (!pin()) showGate(''); else load();
+})();
+</script>
+</body>
+</html>

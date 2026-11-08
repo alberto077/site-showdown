@@ -1,0 +1,109 @@
+/* Site Showdown — one dark stage, a gold spotlight, a magenta jolt. */
+:root {
+  --bg: #0c0b16;
+  --panel: #171529;
+  --panel-2: #1f1c36;
+  --line: #2d2a48;
+  --ink: #f6f3ff;
+  --muted: #a9a3c7;
+  --gold: #ffc83d;
+  --gold-ink: #241a00;
+  --jolt: #ff3d8a;
+  --ok: #4ade80;
+  --display: "Unbounded", "Arial Black", Impact, sans-serif;
+  --body: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 17px/1.5 var(--body);
+  min-height: 100vh;
+}
+a { color: var(--gold); }
+.wrap { max-width: 860px; margin: 0 auto; padding: 32px 16px 80px; }
+.wide { max-width: 1400px; }
+h1, h2 { font-family: var(--display); letter-spacing: -0.02em; line-height: 1.05; text-wrap: balance; margin: 0 0 12px; }
+h1 { font-size: clamp(30px, 6vw, 52px); }
+h1 em { font-style: normal; color: var(--gold); }
+h2 { font-size: 20px; margin-top: 28px; }
+.kicker { font-family: var(--display); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--jolt); margin: 0 0 10px; }
+.lead { color: var(--muted); font-size: 18px; margin: 0 0 24px; max-width: 60ch; }
+
+/* forms */
+form.submit { display: grid; gap: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 20px; }
+label { display: grid; gap: 6px; font-weight: 600; font-size: 14px; }
+input {
+  font: inherit; font-size: 17px; color: var(--ink); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px; width: 100%;
+}
+input:focus-visible, button:focus-visible, a:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+button {
+  font: inherit; font-weight: 700; cursor: pointer; border: 0; border-radius: 12px;
+  padding: 11px 16px; background: var(--gold); color: var(--gold-ink);
+}
+button:disabled { opacity: .45; cursor: not-allowed; }
+button.ghost { background: transparent; color: var(--muted); border: 1px solid var(--line); }
+button.ghost:hover { color: var(--ink); border-color: var(--muted); }
+button.danger { background: var(--jolt); color: #fff; }
+.hint { color: var(--muted); font-size: 14px; margin: 0; }
+.htmx-request .spin { display: inline-block; }
+
+/* student list */
+.flash { background: var(--panel-2); border-left: 4px solid var(--gold); padding: 10px 14px; border-radius: 10px; margin: 0 0 12px; }
+.picks { color: var(--muted); margin: 0 0 12px; }
+.picks strong { color: var(--ink); }
+.empty { color: var(--muted); font-style: italic; }
+ul.sites { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.site {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px;
+  transition: border-color .2s, transform .2s;
+}
+.site.picked { border-color: var(--gold); }
+.site.mine { border-style: dashed; }
+.site .who { flex: 1 1 220px; min-width: 0; display: grid; gap: 2px; }
+.site .who strong { font-size: 18px; }
+.site .who .tag { color: var(--muted); }
+.site .who a { font-size: 14px; overflow-wrap: anywhere; }
+.badge { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; }
+button.star { background: var(--panel-2); color: var(--ink); border: 1px solid var(--line); min-width: 110px; }
+button.star.on { background: var(--gold); color: var(--gold-ink); border-color: var(--gold); }
+
+/* host board */
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 0 0 20px; }
+.toolbar .grow { flex: 1; }
+.pill { display: inline-block; font-size: 13px; font-weight: 700; padding: 4px 12px; border-radius: 999px; background: var(--panel-2); }
+.pill.open { color: var(--ok); }
+.pill.closed { color: var(--jolt); }
+#board { display: grid; gap: 24px; grid-template-columns: minmax(260px, 360px) 1fr; align-items: start; }
+@media (max-width: 800px) { #board { grid-template-columns: 1fr; } }
+.standings { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 18px; position: sticky; top: 16px; }
+.meta { display: grid; gap: 6px; color: var(--muted); font-size: 14px; margin-bottom: 12px; }
+ol.rank { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+ol.rank li { display: grid; grid-template-columns: 28px 1fr 32px; grid-template-areas: "pos name n" "pos bar n"; align-items: center; column-gap: 10px; }
+ol.rank .pos { grid-area: pos; font-family: var(--display); color: var(--muted); font-size: 14px; }
+ol.rank li:nth-child(-n+3) .pos { color: var(--gold); }
+ol.rank .name { grid-area: name; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+ol.rank .bar { grid-area: bar; height: 6px; background: var(--bg); border-radius: 99px; overflow: hidden; }
+ol.rank .bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--jolt), var(--gold)); transition: width .4s; }
+ol.rank .n { grid-area: n; font-family: var(--display); text-align: right; font-variant-numeric: tabular-nums; }
+.grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; display: grid; }
+.card header, .card footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 14px; }
+.card header strong { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card .count { font-family: var(--display); color: var(--gold); }
+.card .shot { position: relative; aspect-ratio: 16 / 11; overflow: hidden; background: #fff; }
+/* Render each site at ~1000px wide and shrink it, so previews look like desktop screenshots. */
+.card iframe { position: absolute; inset: 0; width: 250%; height: 250%; border: 0; transform: scale(.4); transform-origin: 0 0; pointer-events: none; }
+.card footer { font-size: 14px; border-top: 1px solid var(--line); }
+.card footer a { overflow-wrap: anywhere; }
+
+/* pin gate */
+.gate { max-width: 360px; margin: 10vh auto; display: grid; gap: 12px; }
+.err { color: var(--jolt); font-weight: 600; }
+
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
